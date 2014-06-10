@@ -5,26 +5,13 @@ module Pundit
     module Matchers
       extend ::RSpec::Matchers::DSL
 
-      # rubocop:disable Metrics/BlockLength
-      matcher :permit do |user, record|
-        match_proc = lambda do |policy|
-          @violating_permissions = permissions.find_all do |permission|
-            !policy.new(user, record).public_send(permission)
-          end
-          @violating_permissions.empty?
+      matcher :permit do |user, record, *args|
+        match_for_should do |policy|
+          permissions.all? { |permission| policy.new(user, record).public_send(permission, *args) }
         end
 
-        match_when_negated_proc = lambda do |policy|
-          @violating_permissions = permissions.find_all do |permission|
-            policy.new(user, record).public_send(permission)
-          end
-          @violating_permissions.empty?
-        end
-
-        failure_message_proc = lambda do |policy|
-          was_were = @violating_permissions.count > 1 ? "were" : "was"
-          "Expected #{policy} to grant #{permissions.to_sentence} on " \
-          "#{record} but #{@violating_permissions.to_sentence} #{was_were} not granted"
+        match_for_should_not do |policy|
+          permissions.none? { |permission| policy.new(user, record).public_send(permission, *args) }
         end
 
         failure_message_when_negated_proc = lambda do |policy|
