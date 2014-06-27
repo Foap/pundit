@@ -6,18 +6,20 @@ module Pundit
       extend ::RSpec::Matchers::DSL
 
       matcher :permit do |user, record, *args|
-        match_for_should do |policy|
+        match_proc = lambda do |policy|
           permissions.all? { |permission| policy.new(user, record).public_send(permission, *args) }
         end
 
-        match_for_should_not do |policy|
+        match_when_negated_proc = lambda do |policy|
           permissions.none? { |permission| policy.new(user, record).public_send(permission, *args) }
         end
 
+        failure_message_proc = lambda do |policy|
+          "Expected #{policy} to grant #{permissions.to_sentence} on #{record} but it didn't"
+        end
+
         failure_message_when_negated_proc = lambda do |policy|
-          was_were = @violating_permissions.count > 1 ? "were" : "was"
-          "Expected #{policy} not to grant #{permissions.to_sentence} on " \
-          "#{record} but #{@violating_permissions.to_sentence} #{was_were} granted"
+          "Expected #{policy} not to grant #{permissions.to_sentence} on #{record} but it did"
         end
 
         if respond_to?(:match_when_negated)
